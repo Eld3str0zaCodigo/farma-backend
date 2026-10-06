@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard - Farmacia</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body>
+  <!-- Navbar Dinámica según el Rol -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary px-4">
+    <a class="navbar-brand fw-bold" href="#">Stack</a>
+    <div class="navbar-collapse">
+      <ul class="navbar-nav me-auto" id="navMenu">
+        <li class="nav-item"><a class="nav-link active" href="#" onclick="cambiarVista('inicio', this)">Inicio</a></li>
+      </ul>
+      <span class="navbar-text text-white me-3" id="userInfo"></span>
+      <button class="btn btn-outline-light btn-sm" onclick="logout()">Cerrar Sesión</button>
+    </div>
+  </nav>
+
+  <!-- Contenido Principal -->
+  <div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4 class="fw-bold text-secondary mb-0" id="tituloSeccion">Gestión de Medicamentos (Almacén)</h4>
+      <button id="btnNuevo" class="btn btn-primary" style="display: none;" onclick="abrirModalCrear()">
+        <i class="bi bi-plus-circle me-1"></i> + Agregar Medicamento
+      </button>
+    </div>
+
+    <!-- BARRA DE BÚSQUEDA / CONSULTA INTEGRADA -->
+    <div class="mb-3" id="contenedorBusqueda">
+      <div class="input-group">
+        <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+        <input type="text" id="inputBuscar" class="form-control" placeholder="Buscar medicamento por nombre, especialidad o código..." onkeyup="filtrarTabla()">
+      </div>
+    </div>
+
+    <!-- TABLA DE MEDICAMENTOS -->
+    <div id="vistaTabla">
+      <table class="table table-bordered table-hover align-middle shadow-sm">
+        <thead class="table-info">
+          <tr>
+            <th>Código</th>
+            <th>Descripción</th>
+            <th>Especialidad</th>
+            <th>Stock</th>
+            <th>Precio Uni.</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tablaMedicamentos"></tbody>
+      </table>
+    </div>
+
+    <!-- CONTENEDOR PARA OTRAS VISTAS (VENTAS / COMPRAS) -->
+    <div id="vistaModuloEspecial" class="alert alert-info shadow-sm p-4 text-center" style="display: none;">
+      <i class="bi bi-info-circle-fill fs-2 text-primary"></i>
+      <h5 class="fw-bold mt-2" id="nombreModulo">Módulo Activo</h5>
+      <p class="text-muted mb-0">Vista conectada y activa para el rol asignado.</p>
+    </div>
+  </div>
+
+  <!-- MODAL 1: Crear / Editar Medicamento -->
+  <div class="modal fade" id="modalMedicamento" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="modalTitulo">Medicamento</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formMedicamento" class="needs-validation" novalidate>
+            <input type="hidden" id="medId">
+            <div class="mb-3">
+              <label class="form-label fw-bold">Descripción / Nombre</label>
+              <input type="text" id="descripcionMed" class="form-control" placeholder="Ej: Paracetamol 500mg" required>
+              <div class="invalid-feedback">Ingrese la descripción.</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold">Cód. Especialidad</label>
+              <input type="number" id="CodEspec" class="form-control" value="1" required min="1">
+              <div class="invalid-feedback">Ingrese un código de especialidad válido.</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold">Stock</label>
+              <input type="number" id="stock" class="form-control" placeholder="Ej: 100" required min="0">
+              <div class="invalid-feedback">Ingrese el stock.</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold">Precio Venta Unitario (S/)</label>
+              <input type="number" step="0.01" id="precioVentaUni" class="form-control" placeholder="Ej: 2.50" required min="0">
+              <div class="invalid-feedback">Ingrese un precio válido.</div>
+            </div>
+            <button type="submit" class="btn btn-success w-100 fw-bold">Guardar Cambios</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Registro de Trabajadores (Exclusivo para el Administrador) -->
+  <div class="modal fade" id="modalUsuario" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-dark text-white">
+          <h5 class="modal-title fw-bold"><i class="bi bi-person-plus-fill me-2"></i>Registrar Nuevo Trabajador</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="formUsuario" class="needs-validation" novalidate>
+            <div class="mb-3">
+              <label class="form-label fw-bold">Nombre de Usuario</label>
+              <input type="text" id="regUsername" class="form-control" placeholder="Ej: jperez" required minlength="3">
+              <div class="invalid-feedback">Ingrese al menos 3 caracteres.</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold">Correo Electrónico</label>
+              <input type="email" id="regEmail" class="form-control" placeholder="empleado@farmacia.com" required>
+              <div class="invalid-feedback">Ingrese un correo válido.</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold">Contraseña</label>
+              <input type="password" id="regPassword" class="form-control" placeholder="••••••••" required minlength="6">
+              <div class="invalid-feedback">Mínimo 6 caracteres.</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold">Rol Asignado</label>
+              <select id="regRole" class="form-select" required>
+                <option value="usuario">Usuario (Solo Consulta)</option>
+                <option value="moderador">Moderador (Almacén / Modificar)</option>
+                <option value="administrador">Administrador (Acceso Total)</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 fw-bold">Registrar Empleado</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts Bootstrap -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    const user = JSON.parse(localStorage.getItem('user'));
+    const token = localStorage.getItem('token');
+
+    // Validar autenticación
+    if (!token || !user) {
+      window.location.href = 'index.html';
+    }
+
+    // Instancias Modales
+    const modalMedBs = new bootstrap.Modal(document.getElementById('modalMedicamento'));
+    const modalUserBs = new bootstrap.Modal(document.getElementById('modalUsuario'));
+
+    // Configurar interfaz según ROL
+    document.getElementById('userInfo').innerText = `${user.username} (${user.role.toUpperCase()})`;
+    const navMenu = document.getElementById('navMenu');
+    const btnNuevo = document.getElementById('btnNuevo');
+
+    if (user.role === 'administrador') {
+      navMenu.innerHTML += `
+        <li class="nav-item"><a class="nav-link" href="#" onclick="cambiarVista('Ventas', this)">Ventas</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" onclick="cambiarVista('Compras', this)">Compras</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" onclick="cambiarVista('Almacen', this)">Almacen</a></li>
+        <li class="nav-item"><a class="nav-link fw-bold text-warning" href="#" onclick="modalUserBs.show()">+ Registrar Usuario</a></li>
+      `;
+      btnNuevo.style.display = 'block';
+    } else if (user.role === 'moderador') {
+      navMenu.innerHTML += '<li class="nav-item"><a class="nav-link" href="#" onclick="cambiarVista(\'Almacen\', this)">Almacen</a></li>';
+      btnNuevo.style.display = 'block';
+    } else {
+      navMenu.innerHTML += '<li class="nav-item"><a class="nav-link" href="#" onclick="cambiarVista(\'Consulta\', this)">Consulta</a></li>';
+    }
+
+    // CAMBIAR VISTA DINÁMICAMENTE
+    function cambiarVista(nombreModulo, elemento) {
+      document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+      if(elemento) elemento.classList.add('active');
+
+      const titulo = document.getElementById('tituloSeccion');
+      const vistaTabla = document.getElementById('vistaTabla');
+      const contenedorBusqueda = document.getElementById('contenedorBusqueda');
+      const vistaModuloEspecial = document.getElementById('vistaModuloEspecial');
+
+      if (nombreModulo === 'inicio' || nombreModulo === 'Almacen' || nombreModulo === 'Consulta') {
+        titulo.innerText = 'Gestión de Medicamentos (' + nombreModulo.toUpperCase() + ')';
+        vistaTabla.style.display = 'block';
+        contenedorBusqueda.style.display = 'block';
+        vistaModuloEspecial.style.display = 'none';
+        if (user.role !== 'usuario') btnNuevo.style.display = 'block';
+      } else {
+        titulo.innerText = 'Módulo de ' + nombreModulo;
+        vistaTabla.style.display = 'none';
+        contenedorBusqueda.style.display = 'none';
+        btnNuevo.style.display = 'none';
+        vistaModuloEspecial.style.display = 'block';
+        document.getElementById('nombreModulo').innerText = 'Sección de ' + nombreModulo;
+      }
+    }
+
+    // 1. OBTENER MEDICAMENTOS (READ)
+    async function cargarTabla() {
+      try {
+        const res = await fetch('http://localhost:4000/api/medicamentos', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!res.ok) throw new Error('Error al obtener datos');
+        const data = await res.json();
+        
+        const tbody = document.getElementById('tablaMedicamentos');
+        tbody.innerHTML = '';
+
+        data.forEach(m => {
+          const id = m.CodMedicamento || m.id;
+          tbody.innerHTML += `
+            <tr>
+              <td>${id}</td>
+              <td>${m.descripcionMed}</td>
+              <td>${m.Especialidad ? m.Especialidad.descripcionEsp : 'General'}</td>
+              <td>${m.stock}</td>
+              <td>S/ ${parseFloat(m.precioVentaUni).toFixed(2)}</td>
+              <td>
+                ${user.role !== 'usuario' ? `
+                  <button class="btn btn-sm btn-outline-primary me-1" onclick="abrirModalEditar(${id}, '${m.descripcionMed}',${m.CodEspec || 1}, ${m.stock},${m.precioVentaUni})">
+                    <i class="bi bi-pencil"></i>
+                  </button>` : ''}
+                ${user.role === 'administrador' ? `
+                  <button class="btn btn-sm btn-outline-danger" onclick="eliminar(${id})">
+                    <i class="bi bi-trash"></i>
+                  </button>` : ''}
+              </td>
+            </tr>`;
+        });
+      } catch (error) {
+        console.error('Error al cargar la tabla:', error);
+      }
+    }
+
+    // 2. FILTRAR TABLA (CONSULTA / BÚSQUEDA)
+    function filtrarTabla() {
+      const busqueda = document.getElementById('inputBuscar').value.toLowerCase();
+      const filas = document.querySelectorAll('#tablaMedicamentos tr');
+
+      filas.forEach(fila => {
+        const textoFila = fila.innerText.toLowerCase();
+        fila.style.display = textoFila.includes(busqueda) ? '' : 'none';
+      });
+    }
+
+    // 3. MODALES CREAR Y EDITAR MEDICAMENTO
+    function abrirModalCrear() {
+      document.getElementById('modalTitulo').innerText = 'Agregar Medicamento';
+      document.getElementById('medId').value = '';
+      const form = document.getElementById('formMedicamento');
+      form.reset();
+      form.classList.remove('was-validated');
+      document.getElementById('CodEspec').value = 1;
+      modalMedBs.show();
+    }
+
+    function abrirModalEditar(id, descripcion, codEspec, stock, precio) {
+      document.getElementById('modalTitulo').innerText = 'Editar Medicamento';
+      document.getElementById('medId').value = id;
+      document.getElementById('descripcionMed').value = descripcion;
+      document.getElementById('CodEspec').value = codEspec || 1;
+      document.getElementById('stock').value = stock;
+      document.getElementById('precioVentaUni').value = precio;
+      
+      const form = document.getElementById('formMedicamento');
+      form.classList.remove('was-validated');
+      modalMedBs.show();
+    }
+
+    // 4. GUARDAR MEDICAMENTO (POST / PUT) CON VALIDACIÓN
+    document.getElementById('formMedicamento').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+
+      if (!form.checkValidity()) {
+        e.stopPropagation();
+        form.classList.add('was-validated');
+        return;
+      }
+
+      const id = document.getElementById('medId').value;
+      const bodyData = {
+        descripcionMed: document.getElementById('descripcionMed').value.trim(),
+        CodEspec: parseInt(document.getElementById('CodEspec').value),
+        stock: parseInt(document.getElementById('stock').value),
+        precioVentaUni: parseFloat(document.getElementById('precioVentaUni').value)
+      };
+
+      const url = id ? `http://localhost:4000/api/medicamentos/${id}` : 'http://localhost:4000/api/medicamentos';
+      const method = id ? 'PUT' : 'POST';
+
+      try {
+        const res = await fetch(url, {
+          method: method,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(bodyData)
+        });
+
+        if (res.ok) {
+          modalMedBs.hide();
+          cargarTabla();
+        } else {
+          const err = await res.json();
+          alert('Error: ' + (err.message || 'Verifique que la especialidad exista en la BD.'));
+        }
+      } catch (error) {
+        console.error('Error al guardar:', error);
+      }
+    });
+
+    // 5. REGISTRAR NUEVO TRABAJADOR (SOLO ADMIN)
+    document.getElementById('formUsuario').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+
+      if (!form.checkValidity()) {
+        e.stopPropagation();
+        form.classList.add('was-validated');
+        return;
+      }
+
+      const bodyData = {
+        username: document.getElementById('regUsername').value.trim(),
+        email: document.getElementById('regEmail').value.trim(),
+        password: document.getElementById('regPassword').value.trim(),
+        role: document.getElementById('regRole').value
+      };
+
+      try {
+        const res = await fetch('http://localhost:4000/api/auth/register', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(bodyData)
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          alert('¡Trabajador registrado exitosamente!');
+          modalUserBs.hide();
+          form.reset();
+          form.classList.remove('was-validated');
+        } else {
+          alert('Error: ' + (data.error || 'No se pudo crear el usuario.'));
+        }
+      } catch (error) {
+        alert('Error en el servidor al registrar usuario.');
+      }
+    });
+
+    // 6. ELIMINAR MEDICAMENTO (DELETE)
+    async function eliminar(id) {
+      if (confirm('¿Está seguro de eliminar este medicamento?')) {
+        try {
+          const res = await fetch(`http://localhost:4000/api/medicamentos/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+
+          if (res.ok) {
+            cargarTabla();
+          } else {
+            alert('No tiene permisos o no se pudo eliminar.');
+          }
+        } catch (error) {
+          console.error('Error al eliminar:', error);
+        }
+      }
+    }
+
+    // 7. LOGOUT
+    function logout() {
+      localStorage.clear();
+      window.location.href = 'index.html';
+    }
+
+    cargarTabla();
+  </script>
+</body>
+</html>

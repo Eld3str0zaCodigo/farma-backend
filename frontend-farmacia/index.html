@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Login - Farmacia</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body class="bg-light d-flex align-items-center vh-100">
+  <div class="container" style="max-width: 400px;">
+    <div class="card shadow p-4">
+      <h3 class="text-center mb-4 fw-bold text-primary">
+        <i class="bi bi-capsule me-2"></i>Sistema Farmacia
+      </h3>
+      
+      <form id="formLogin" class="needs-validation" novalidate>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Correo Electrónico</label>
+          <input type="email" id="loginEmail" class="form-control" placeholder="admin@farmacia.com" required>
+          <div class="invalid-feedback">Por favor, ingrese un correo válido.</div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Contraseña</label>
+          <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required minlength="4">
+          <div class="invalid-feedback">Ingrese su contraseña.</div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">
+          <i class="bi bi-box-arrow-in-right me-1"></i> Iniciar Sesión
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    document.getElementById('formLogin').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+
+      if (!form.checkValidity()) {
+        e.stopPropagation();
+        form.classList.add('was-validated');
+        return;
+      }
+
+      const bodyData = {
+        email: document.getElementById('loginEmail').value.trim(),
+        password: document.getElementById('loginPassword').value.trim()
+      };
+
+      try {
+        const res = await fetch('http://localhost:4000/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyData)
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          window.location.href = 'dashboard.html';
+        } else {
+          alert('Error: ' + (data.message || 'Credenciales incorrectas'));
+        }
+      } catch (error) {
+        alert('No se pudo conectar con el servidor backend.');
+      }
+    });
+  </script>
+</body>
+</html>
